@@ -1,14 +1,12 @@
 export const PAIRS = [
-  'EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF', 'AUD/USD', 'USD/CAD',
-  'NZD/USD', 'EUR/GBP', 'EUR/JPY', 'GBP/JPY', 'XAU/USD', 'Other',
+  'EUR/USD', 'GBP/USD', 'USD/CHF', 'BTC/USD',  'XAU/USD',
 ]
 
 export const SETUPS = [
-  'Breakout', 'Trend follow', 'Reversal', 'Support/Resistance',
-  'Fibonacci', 'News play', 'ICT/SMC', 'Other',
+'CRT & ICT', 'ICT/SMC',
 ]
 
-export const SESSIONS = ['London', 'New York', 'Asian', 'Overlap', 'Other']
+export const SESSIONS = ['London', 'New York', 'Asian', ]
 
 export const EMOTIONS = [
   { label: '😰 Fearful',   color: 'text-red-400' },

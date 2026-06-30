@@ -6,12 +6,19 @@ const EMPTY = {
   entry: '', sl: '', tp: '', lots: '',
   setup: 'Breakout', session: 'London', emotion: 3,
   notes: '', img: null,
+  outcome: '', // 'win' | 'loss'
 }
 
 function calcPreview(entry, sl, tp, pair) {
   const e = parseFloat(entry), s = parseFloat(sl), p = parseFloat(tp)
   if (!e || !s || !p) return null
-  const pipSize = pair.includes('JPY') || pair === 'XAU/USD' ? 0.01 : 0.0001
+
+  let pipSize = 0.0001
+  if (pair.includes('JPY')) pipSize = 0.01
+  else if (pair === 'XAU/USD') pipSize = 0.01
+  else if (pair === 'XAG/USD') pipSize = 0.001
+  else if (pair === 'BTC/USD') pipSize = 1
+
   const riskPips = Math.abs(e - s) / pipSize
   const rewardPips = Math.abs(p - e) / pipSize
   if (riskPips === 0) return null
@@ -43,6 +50,10 @@ export default function LogTrade({ onAdd, onUpdate, editTrade, onCancelEdit }) {
   function submit() {
     if (!form.entry || !form.sl || !form.tp) {
       setErr('Entry, stop loss, and take profit are all required.')
+      return
+    }
+    if (!form.outcome) {
+      setErr('Select whether this trade hit TP or SL.')
       return
     }
     setErr('')
@@ -129,6 +140,31 @@ export default function LogTrade({ onAdd, onUpdate, editTrade, onCancelEdit }) {
             <span className="text-slate-500">R:R → <span className="text-cyan-400 font-bold">1:{preview.rr}</span></span>
           </div>
         )}
+
+        <div>
+          <label className="block text-[11px] text-slate-500 uppercase tracking-wider mb-1.5">Result</label>
+          <div className="flex gap-2">
+            {[
+              { key: 'win',  label: 'Hit TP (win)' },
+              { key: 'loss', label: 'Hit SL (loss)' },
+            ].map(opt => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => set('outcome', opt.key)}
+                className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                  form.outcome === opt.key
+                    ? opt.key === 'win'
+                      ? 'bg-emerald-950 border-emerald-700 text-emerald-400'
+                      : 'bg-red-950 border-red-700 text-red-400'
+                    : 'bg-transparent border-[#1a2035] text-slate-500'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div>
