@@ -9,7 +9,12 @@ import { useTrades } from './hooks/useTrades'
 function App() {
   const [tab, setTab] = useState('dashboard')
   const [editTrade, setEditTrade] = useState(null)
-  const { trades, addTrade, updateTrade, deleteTrade, clearAll } = useTrades()
+  const {
+    trades, addTrade, updateTrade, deleteTrade, clearAll,
+    exportJSON, importJSON, exportCSV,
+    startingBalance, setStartingBalance,
+    lossLimitPct, setLossLimitPct,
+  } = useTrades()
 
   function handleAdd(trade) {
     addTrade(trade)
@@ -41,7 +46,16 @@ function App() {
     <div className="min-h-screen bg-[#080b12] text-slate-200">
       <Header tab={tab} setTab={handleNavToAdd} />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-        {tab === 'dashboard' && <Dashboard trades={trades} setTab={handleNavToAdd} />}
+        {tab === 'dashboard' && (
+          <Dashboard
+            trades={trades}
+            setTab={handleNavToAdd}
+            startingBalance={startingBalance}
+            setStartingBalance={setStartingBalance}
+            lossLimitPct={lossLimitPct}
+            setLossLimitPct={setLossLimitPct}
+          />
+        )}
         {tab === 'add' && (
           <LogTrade
             onAdd={handleAdd}
@@ -57,6 +71,9 @@ function App() {
             onClear={clearAll}
             onEdit={handleEdit}
             setTab={handleNavToAdd}
+            exportJSON={exportJSON}
+            importJSON={importJSON}
+            exportCSV={exportCSV}
           />
         )}
         {tab === 'stats' && <Performance trades={trades} />}
