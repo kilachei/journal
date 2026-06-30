@@ -5,7 +5,7 @@ const EMPTY = {
   pair: 'EUR/USD', dir: 'Buy', date: TODAY, time: '',
   entry: '', sl: '', tp: '', lots: '',
   setup: 'Breakout', session: 'London', emotion: 3,
-  notes: '',
+  notes: '', img: null,
 }
 
 function calcPreview(entry, sl, tp, pair) {
@@ -147,6 +147,34 @@ export default function LogTrade({ onAdd }) {
             placeholder="What did you see? What would you do differently?"
             className="h-20 resize-none"
           />
+        </div>
+        <div>
+          <label className="block text-[11px] text-slate-500 uppercase tracking-wider mb-1.5">
+            Chart screenshot (optional)
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={e => {
+              const file = e.target.files[0]
+              if (!file) return
+              const reader = new FileReader()
+              reader.onload = ev => set('img', ev.target.result)
+              reader.readAsDataURL(file)
+            }}
+          />
+          {form.img && (
+            <div className="mt-2 relative inline-block">
+              <img src={form.img} alt="Chart" className="rounded-xl border border-[#1a2035] max-h-48 object-contain" />
+              <button
+                type="button"
+                onClick={() => set('img', null)}
+                className="absolute top-2 right-2 bg-red-950 text-red-400 border border-red-800/30 rounded-full w-6 h-6 text-xs flex items-center justify-center hover:bg-red-900 transition-colors"
+              >
+                ×
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
