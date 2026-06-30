@@ -3,15 +3,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { calcTrade, fmtDate, fmtUsd } from '../utils/calc'
 import { EMOTIONS } from '../utils/constants'
 
-function getWeekStart(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00')
-  const day = d.getDay()
-  const diff = day === 0 ? 6 : day - 1 // week starts Monday
-  d.setDate(d.getDate() - diff)
-  return d.toISOString().split('T')[0]
-}
-
-export default function Dashboard({ trades, setTab, startingBalance, setStartingBalance, lossLimitPct, setLossLimitPct }) {
+export default function Dashboard({ trades, setTab, startingBalance, setStartingBalance }) {
   const [selected, setSelected] = useState(null)
   const [editingBalance, setEditingBalance] = useState(false)
   const [balanceInput, setBalanceInput] = useState(startingBalance || '')
@@ -28,17 +20,6 @@ export default function Dashboard({ trades, setTab, startingBalance, setStarting
 
   const currentBalance = startingBalance + totalUsd
   const pctReturn = startingBalance > 0 ? (totalUsd / startingBalance) * 100 : null
-
-  const today = new Date().toISOString().split('T')[0]
-  const weekStart = getWeekStart(today)
-  const todayPnl = settled.filter(t => t.date === today).reduce((a, t) => a + parseFloat(t.usd), 0)
-  const weekPnl = settled.filter(t => t.date >= weekStart).reduce((a, t) => a + parseFloat(t.usd), 0)
-
-  const limitBase = startingBalance > 0 ? startingBalance : null
-  const todayLossPct = limitBase ? (-todayPnl / limitBase) * 100 : null
-  const weekLossPct = limitBase ? (-weekPnl / limitBase) * 100 : null
-  const todayBreached = lossLimitPct > 0 && todayLossPct !== null && todayLossPct >= lossLimitPct
-  const weekBreached = lossLimitPct > 0 && weekLossPct !== null && weekLossPct >= lossLimitPct
 
   function saveBalance() {
     setStartingBalance(balanceInput)
@@ -111,44 +92,6 @@ export default function Dashboard({ trades, setTab, startingBalance, setStarting
           </>
         )}
       </div>
-
-      <div className="bg-[#0f1320] border border-[#1a2035] rounded-2xl p-4 flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <p className="text-[11px] text-slate-500 uppercase tracking-widest font-medium">Daily loss limit</p>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {startingBalance > 0
-              ? "Get warned when today's or this week's losses cross this % of your balance."
-              : 'Set a starting balance above to enable this.'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            step="0.5"
-            value={lossLimitPct || ''}
-            onChange={e => setLossLimitPct(e.target.value)}
-            placeholder="e.g. 5"
-            disabled={startingBalance <= 0}
-            className="bg-[#080b12] border border-[#1a2035] rounded-lg px-3 py-1.5 text-sm text-slate-200 font-mono outline-none focus:border-cyan-700/50 w-20 disabled:opacity-40"
-          />
-          <span className="text-xs text-slate-500">%</span>
-        </div>
-      </div>
-
-      {(todayBreached || weekBreached) && (
-        <div className="bg-red-950/20 border border-red-800/30 rounded-xl px-4 py-3 space-y-1">
-          {todayBreached && (
-            <p className="text-sm text-red-400">
-              ⚠ Today's losses are {todayLossPct.toFixed(1)}% of your balance — over your {lossLimitPct}% daily limit. Consider stopping for today.
-            </p>
-          )}
-          {weekBreached && (
-            <p className="text-sm text-red-400">
-              ⚠ This week's losses are {weekLossPct.toFixed(1)}% of your balance — over your {lossLimitPct}% weekly limit.
-            </p>
-          )}
-        </div>
-      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Total P&L" value={settled.length ? fmtUsd(totalUsd) : '$0.00'} color={pnlColor} />

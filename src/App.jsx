@@ -13,7 +13,6 @@ function App() {
     trades, addTrade, updateTrade, deleteTrade, clearAll,
     exportJSON, importJSON, exportCSV,
     startingBalance, setStartingBalance,
-    lossLimitPct, setLossLimitPct,
   } = useTrades()
 
   function handleAdd(trade) {
@@ -52,8 +51,6 @@ function App() {
             setTab={handleNavToAdd}
             startingBalance={startingBalance}
             setStartingBalance={setStartingBalance}
-            lossLimitPct={lossLimitPct}
-            setLossLimitPct={setLossLimitPct}
           />
         )}
         {tab === 'add' && (

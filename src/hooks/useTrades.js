@@ -3,7 +3,6 @@ import { calcTrade } from '../utils/calc'
 
 const KEY = 'kilachei_trades_v1'
 const BALANCE_KEY = 'kilachei_balance_v1'
-const LIMIT_KEY = 'kilachei_losslimit_v1'
 
 export function useTrades() {
   const [trades, setTrades] = useState(() => {
@@ -24,15 +23,6 @@ export function useTrades() {
     }
   })
 
-  const [lossLimitPct, setLossLimitPctState] = useState(() => {
-    try {
-      const stored = localStorage.getItem(LIMIT_KEY)
-      return stored ? parseFloat(stored) : 0
-    } catch {
-      return 0
-    }
-  })
-
   useEffect(() => {
     localStorage.setItem(KEY, JSON.stringify(trades))
   }, [trades])
@@ -41,16 +31,8 @@ export function useTrades() {
     localStorage.setItem(BALANCE_KEY, String(startingBalance))
   }, [startingBalance])
 
-  useEffect(() => {
-    localStorage.setItem(LIMIT_KEY, String(lossLimitPct))
-  }, [lossLimitPct])
-
   function setStartingBalance(amount) {
     setStartingBalanceState(parseFloat(amount) || 0)
-  }
-
-  function setLossLimitPct(pct) {
-    setLossLimitPctState(parseFloat(pct) || 0)
   }
 
   function addTrade(trade) {
@@ -126,6 +108,5 @@ export function useTrades() {
     trades, addTrade, updateTrade, deleteTrade, clearAll,
     exportJSON, importJSON, exportCSV,
     startingBalance, setStartingBalance,
-    lossLimitPct, setLossLimitPct,
   }
 }
