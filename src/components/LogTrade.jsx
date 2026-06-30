@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { PAIRS, SETUPS, SESSIONS, EMOTIONS, TODAY } from '../utils/constants'
 
 const EMPTY = {
@@ -22,9 +22,16 @@ function calcPreview(entry, sl, tp, pair) {
   }
 }
 
-export default function LogTrade({ onAdd }) {
-  const [form, setForm] = useState(EMPTY)
+export default function LogTrade({ onAdd, onUpdate, editTrade, onCancelEdit }) {
+  const isEditing = !!editTrade
+
+  const [form, setForm] = useState(editTrade || EMPTY)
   const [err, setErr] = useState('')
+
+  useEffect(() => {
+    setForm(editTrade || EMPTY)
+    setErr('')
+  }, [editTrade])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -39,15 +46,26 @@ export default function LogTrade({ onAdd }) {
       return
     }
     setErr('')
-    onAdd(form)
-    setForm(f => ({ ...EMPTY, pair: f.pair, setup: f.setup, session: f.session }))
+
+    if (isEditing) {
+      onUpdate(editTrade.id, form)
+    } else {
+      onAdd(form)
+      setForm(f => ({ ...EMPTY, pair: f.pair, setup: f.setup, session: f.session }))
+    }
   }
 
   return (
     <div className="max-w-2xl space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold text-slate-100">Log a trade</h2>
-        <p className="text-sm text-slate-500 mt-0.5">Record your setup, execution and mindset.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-100">
+            {isEditing ? 'Edit trade' : 'Log a trade'}
+          </h2>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {isEditing ? 'Update the details of this trade.' : 'Record your setup, execution and mindset.'}
+          </p>
+        </div>
       </div>
 
       <div className="bg-[#0f1320] border border-[#1a2035] rounded-2xl p-5 space-y-4">
@@ -180,9 +198,17 @@ export default function LogTrade({ onAdd }) {
 
       {err && <p className="text-sm text-red-400 bg-red-950/30 border border-red-800/30 rounded-lg px-4 py-2">{err}</p>}
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-3">
+        {isEditing && (
+          <button
+            onClick={onCancelEdit}
+            className="text-slate-400 hover:text-slate-200 text-sm px-4 py-2 rounded-lg border border-[#1a2035] transition-colors"
+          >
+            Cancel
+          </button>
+        )}
         <button onClick={submit} className="bg-cyan-500 hover:bg-cyan-400 transition-colors text-black font-semibold text-sm px-6 py-2 rounded-lg">
-          Log trade
+          {isEditing ? 'Update trade' : 'Log trade'}
         </button>
       </div>
     </div>

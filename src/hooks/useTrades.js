@@ -20,6 +20,10 @@ export function useTrades() {
     setTrades(ts => [{ ...trade, id: Date.now() }, ...ts])
   }
 
+  function updateTrade(id, updatedTrade) {
+    setTrades(ts => ts.map(t => (t.id === id ? { ...updatedTrade, id } : t)))
+  }
+
   function deleteTrade(id) {
     setTrades(ts => ts.filter(t => t.id !== id))
   }
@@ -28,5 +32,5 @@ export function useTrades() {
     setTrades([])
   }
 
-  return { trades, addTrade, deleteTrade, clearAll }
+  return { trades, addTrade, updateTrade, deleteTrade, clearAll }
 }

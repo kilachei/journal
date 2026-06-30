@@ -8,20 +8,57 @@ import { useTrades } from './hooks/useTrades'
 
 function App() {
   const [tab, setTab] = useState('dashboard')
-  const { trades, addTrade, deleteTrade, clearAll } = useTrades()
+  const [editTrade, setEditTrade] = useState(null)
+  const { trades, addTrade, updateTrade, deleteTrade, clearAll } = useTrades()
 
   function handleAdd(trade) {
     addTrade(trade)
     setTab('log')
   }
 
+  function handleUpdate(id, trade) {
+    updateTrade(id, trade)
+    setEditTrade(null)
+    setTab('log')
+  }
+
+  function handleEdit(trade) {
+    setEditTrade(trade)
+    setTab('add')
+  }
+
+  function handleCancelEdit() {
+    setEditTrade(null)
+    setTab('log')
+  }
+
+  function handleNavToAdd(targetTab) {
+    if (targetTab === 'add') setEditTrade(null)
+    setTab(targetTab)
+  }
+
   return (
     <div className="min-h-screen bg-[#080b12] text-slate-200">
-      <Header tab={tab} setTab={setTab} />
+      <Header tab={tab} setTab={handleNavToAdd} />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-        {tab === 'dashboard' && <Dashboard trades={trades} setTab={setTab} />}
-        {tab === 'add' && <LogTrade onAdd={handleAdd} />}
-        {tab === 'log' && <TradeLog trades={trades} onDelete={deleteTrade} onClear={clearAll} setTab={setTab} />}
+        {tab === 'dashboard' && <Dashboard trades={trades} setTab={handleNavToAdd} />}
+        {tab === 'add' && (
+          <LogTrade
+            onAdd={handleAdd}
+            onUpdate={handleUpdate}
+            editTrade={editTrade}
+            onCancelEdit={handleCancelEdit}
+          />
+        )}
+        {tab === 'log' && (
+          <TradeLog
+            trades={trades}
+            onDelete={deleteTrade}
+            onClear={clearAll}
+            onEdit={handleEdit}
+            setTab={handleNavToAdd}
+          />
+        )}
         {tab === 'stats' && <Performance trades={trades} />}
       </main>
     </div>

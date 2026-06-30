@@ -6,7 +6,7 @@ export function getPipSize(pair) {
 
 export function getPipValuePerLot(pair) {
   if (pair.includes('JPY')) return 1000
-  if (pair === 'XAU/USD') return 100
+  if (pair === 'XAU/USD') return 1
   return 10
 }
 

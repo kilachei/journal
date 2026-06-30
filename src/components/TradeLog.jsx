@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { calcTrade, fmtDate, fmtUsd } from '../utils/calc'
 import { EMOTIONS } from '../utils/constants'
 
-export default function TradeLog({ trades, onDelete, onClear, setTab }) {
+export default function TradeLog({ trades, onDelete, onClear, onEdit, setTab }) {
   const [expanded, setExpanded] = useState(null)
 
   const withCalc = useMemo(() => trades.map(t => ({ ...t, ...calcTrade(t) })), [trades])
@@ -70,7 +70,20 @@ export default function TradeLog({ trades, onDelete, onClear, setTab }) {
                     {t.notes}
                   </div>
                 )}
-                <div className="flex justify-end">
+                {t.img && (
+                  <img
+                    src={t.img}
+                    alt="Chart screenshot"
+                    className="rounded-xl border border-[#1a2035] max-h-64 object-contain w-full"
+                  />
+                )}
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => onEdit(t)}
+                    className="text-xs text-slate-500 hover:text-cyan-400 border border-[#1a2035] hover:border-cyan-800/30 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    Edit
+                  </button>
                   <button
                     onClick={() => { if (confirm('Delete this trade?')) onDelete(t.id) }}
                     className="text-xs text-slate-500 hover:text-red-400 border border-[#1a2035] hover:border-red-800/30 px-3 py-1.5 rounded-lg transition-colors"
