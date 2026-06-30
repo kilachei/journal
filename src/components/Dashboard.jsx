@@ -1,9 +1,11 @@
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { calcTrade, fmtDate, fmtUsd } from '../utils/calc'
 import { EMOTIONS } from '../utils/constants'
 
 export default function Dashboard({ trades, setTab }) {
+  const [selected, setSelected] = useState(null)
+
   const withCalc = useMemo(() => trades.map(t => ({ ...t, ...calcTrade(t) })), [trades])
   const settled = withCalc.filter(t => t.result !== 'open')
 
@@ -90,7 +92,11 @@ export default function Dashboard({ trades, setTab }) {
               </thead>
               <tbody>
                 {recent.map(t => (
-                  <tr key={t.id} className="border-b border-[#1a2035]/50 last:border-0">
+                  <tr
+                    key={t.id}
+                    onClick={() => setSelected(t)}
+                    className="border-b border-[#1a2035]/50 last:border-0 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                  >
                     <td className="px-4 py-3 font-mono font-bold text-slate-100">{t.pair}</td>
                     <td className="px-4 py-3">
                       <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${t.dir === 'Buy' ? 'bg-emerald-950 text-emerald-400' : 'bg-red-950 text-red-400'}`}>
@@ -109,6 +115,72 @@ export default function Dashboard({ trades, setTab }) {
           </div>
         )}
       </div>
+
+      {selected && (
+        <div
+          onClick={() => setSelected(null)}
+          className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="bg-[#0f1320] border border-[#1a2035] rounded-2xl p-5 max-w-lg w-full max-h-[85vh] overflow-y-auto space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-bold text-slate-100 text-base">{selected.pair}</span>
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${selected.dir === 'Buy' ? 'bg-emerald-950 text-emerald-400' : 'bg-red-950 text-red-400'}`}>
+                  {selected.dir.toUpperCase()}
+                </span>
+                <span className="text-xs text-slate-500 font-mono">{fmtDate(selected.date)}</span>
+              </div>
+              <button
+                onClick={() => setSelected(null)}
+                className="text-slate-500 hover:text-slate-200 w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/5 transition-colors"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              {[
+                ['Entry', selected.entry], ['Stop', selected.sl], ['Target', selected.tp],
+                ['Lots', selected.lots], ['Pips', selected.pips], ['R:R', selected.rr ? '1:' + selected.rr : '—'],
+              ].map(([label, val]) => (
+                <div key={label} className="bg-[#080b12] rounded-lg px-3 py-2">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">{label}</p>
+                  <p className="font-mono font-semibold text-slate-200 text-sm">{val || '—'}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between bg-[#080b12] rounded-lg px-3 py-2">
+              <span className="text-[11px] text-slate-500 uppercase tracking-wider">Result</span>
+              <span className={`font-mono font-semibold text-sm ${parseFloat(selected.usd) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {fmtUsd(selected.usd)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between bg-[#080b12] rounded-lg px-3 py-2">
+              <span className="text-[11px] text-slate-500 uppercase tracking-wider">Mindset</span>
+              <span className="text-sm">{EMOTIONS[(selected.emotion || 3) - 1].label}</span>
+            </div>
+
+            {selected.notes && (
+              <div className="bg-[#080b12] border border-[#1a2035] rounded-xl px-3.5 py-3 text-sm text-slate-400">
+                {selected.notes}
+              </div>
+            )}
+
+            {selected.img && (
+              <img
+                src={selected.img}
+                alt="Chart screenshot"
+                className="rounded-xl border border-[#1a2035] max-h-72 object-contain w-full"
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
