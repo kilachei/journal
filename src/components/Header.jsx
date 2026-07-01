@@ -1,4 +1,4 @@
-export default function Header({ tab, setTab }) {
+export default function Header({ tab, setTab, user, onSignOut }) {
   const tabs = [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'log',       label: 'Trade Log' },
@@ -22,11 +22,29 @@ export default function Header({ tab, setTab }) {
             </div>
           </div>
 
-          {/* Right side: date + log trade button */}
+          {/* Right side: date + user + sign out + log trade */}
           <div className="flex items-center gap-3">
             <span className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 bg-[#141826] border border-[#1a2035] px-3 py-1.5 rounded-full font-mono">
               {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
             </span>
+
+            {/* User name */}
+            {user && (
+              <span className="hidden md:block text-xs text-slate-400 font-medium truncate max-w-[120px]">
+                {user.displayName || user.email}
+              </span>
+            )}
+
+            {/* Sign out */}
+            {onSignOut && (
+              <button
+                onClick={onSignOut}
+                className="text-xs text-slate-500 hover:text-red-400 border border-[#1a2035] hover:border-red-800/30 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+              >
+                Sign out
+              </button>
+            )}
+
             <button
               onClick={() => setTab('add')}
               className="bg-cyan-500 hover:bg-cyan-400 transition-colors text-black font-semibold text-xs sm:text-sm px-3.5 sm:px-4 py-2 rounded-lg whitespace-nowrap"

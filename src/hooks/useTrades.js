@@ -1,18 +1,16 @@
 import { useState, useEffect } from 'react'
+import {
+  collection, addDoc, updateDoc, deleteDoc,
+  doc, onSnapshot, query, orderBy, writeBatch
+} from 'firebase/firestore'
+import { db, auth } from '../firebase'
 import { calcTrade } from '../utils/calc'
 
-const KEY = 'kilachei_trades_v1'
 const BALANCE_KEY = 'kilachei_balance_v1'
 
 export function useTrades() {
-  const [trades, setTrades] = useState(() => {
-    try {
-      const stored = localStorage.getItem(KEY)
-      return stored ? JSON.parse(stored) : []
-    } catch {
-      return []
-    }
-  })
+  const [trades, setTrades] = useState([])
+  const [loading, setLoading] = useState(true)
 
   const [startingBalance, setStartingBalanceState] = useState(() => {
     try {
@@ -23,9 +21,24 @@ export function useTrades() {
     }
   })
 
+  // Listen to Firestore trades for the current user in real time
   useEffect(() => {
-    localStorage.setItem(KEY, JSON.stringify(trades))
-  }, [trades])
+    const user = auth.currentUser
+    if (!user) return
+
+    const q = query(
+      collection(db, 'users', user.uid, 'trades'),
+      orderBy('created_at', 'desc')
+    )
+
+    const unsubscribe = onSnapshot(q, snapshot => {
+      const fetched = snapshot.docs.map(d => ({ ...d.data(), id: d.id }))
+      setTrades(fetched)
+      setLoading(false)
+    })
+
+    return unsubscribe
+  }, [auth.currentUser?.uid])
 
   useEffect(() => {
     localStorage.setItem(BALANCE_KEY, String(startingBalance))
@@ -35,20 +48,36 @@ export function useTrades() {
     setStartingBalanceState(parseFloat(amount) || 0)
   }
 
-  function addTrade(trade) {
-    setTrades(ts => [{ ...trade, id: Date.now() }, ...ts])
+  async function addTrade(trade) {
+    const user = auth.currentUser
+    if (!user) return
+    await addDoc(collection(db, 'users', user.uid, 'trades'), {
+      ...trade,
+      created_at: new Date().toISOString(),
+    })
   }
 
-  function updateTrade(id, updatedTrade) {
-    setTrades(ts => ts.map(t => (t.id === id ? { ...updatedTrade, id } : t)))
+  async function updateTrade(id, updatedTrade) {
+    const user = auth.currentUser
+    if (!user) return
+    const ref = doc(db, 'users', user.uid, 'trades', id)
+    await updateDoc(ref, { ...updatedTrade })
   }
 
-  function deleteTrade(id) {
-    setTrades(ts => ts.filter(t => t.id !== id))
+  async function deleteTrade(id) {
+    const user = auth.currentUser
+    if (!user) return
+    await deleteDoc(doc(db, 'users', user.uid, 'trades', id))
   }
 
-  function clearAll() {
-    setTrades([])
+  async function clearAll() {
+    const user = auth.currentUser
+    if (!user) return
+    const batch = writeBatch(db)
+    trades.forEach(t => {
+      batch.delete(doc(db, 'users', user.uid, 'trades', t.id))
+    })
+    await batch.commit()
   }
 
   function exportJSON() {
@@ -64,13 +93,19 @@ export function useTrades() {
   function importJSON(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
-      reader.onload = e => {
+      reader.onload = async e => {
         try {
+          const user = auth.currentUser
+          if (!user) throw new Error('Not logged in')
           const imported = JSON.parse(e.target.result)
           if (!Array.isArray(imported)) throw new Error('Invalid file: expected an array of trades')
-          const withNewIds = imported.map(t => ({ ...t, id: t.id ?? Date.now() + Math.random() }))
-          setTrades(ts => [...withNewIds, ...ts])
-          resolve(withNewIds.length)
+          for (const t of imported) {
+            await addDoc(collection(db, 'users', user.uid, 'trades'), {
+              ...t,
+              created_at: t.created_at || new Date().toISOString(),
+            })
+          }
+          resolve(imported.length)
         } catch (err) {
           reject(err)
         }
@@ -81,7 +116,7 @@ export function useTrades() {
   }
 
   function exportCSV() {
-    const headers = ['date', 'time', 'pair', 'dir', 'entry', 'sl', 'tp', 'outcome', 'lots', 'pips', 'usd', 'rr', 'setup', 'session', 'emotion', 'notes']
+    const headers = ['date', 'time', 'pair', 'dir', 'entry', 'sl', 'tp', 'lots', 'pips', 'usd', 'rr', 'setup', 'session', 'emotion', 'notes']
     const rows = trades.map(t => {
       const calc = calcTrade(t)
       return headers.map(h => {
@@ -105,7 +140,7 @@ export function useTrades() {
   }
 
   return {
-    trades, addTrade, updateTrade, deleteTrade, clearAll,
+    trades, loading, addTrade, updateTrade, deleteTrade, clearAll,
     exportJSON, importJSON, exportCSV,
     startingBalance, setStartingBalance,
   }
