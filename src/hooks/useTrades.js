@@ -1,27 +1,17 @@
 import { useState, useEffect } from 'react'
 import {
   collection, addDoc, updateDoc, deleteDoc,
-  doc, onSnapshot, query, orderBy, writeBatch
+  doc, onSnapshot, query, orderBy, writeBatch, setDoc, getDoc
 } from 'firebase/firestore'
 import { db, auth } from '../firebase'
 import { calcTrade } from '../utils/calc'
 
-const BALANCE_KEY = 'kilachei_balance_v1'
-
 export function useTrades() {
   const [trades, setTrades] = useState([])
   const [loading, setLoading] = useState(true)
+  const [startingBalance, setStartingBalanceState] = useState(0)
 
-  const [startingBalance, setStartingBalanceState] = useState(() => {
-    try {
-      const stored = localStorage.getItem(BALANCE_KEY)
-      return stored ? parseFloat(stored) : 0
-    } catch {
-      return 0
-    }
-  })
-
-  // Listen to Firestore trades for the current user in real time
+  // Listen to trades in real time
   useEffect(() => {
     const user = auth.currentUser
     if (!user) return
@@ -40,12 +30,33 @@ export function useTrades() {
     return unsubscribe
   }, [auth.currentUser?.uid])
 
+  // Load starting balance from Firestore on login
   useEffect(() => {
-    localStorage.setItem(BALANCE_KEY, String(startingBalance))
-  }, [startingBalance])
+    const user = auth.currentUser
+    if (!user) return
 
-  function setStartingBalance(amount) {
-    setStartingBalanceState(parseFloat(amount) || 0)
+    const profileRef = doc(db, 'users', user.uid, 'profile', 'settings')
+
+    const unsubscribe = onSnapshot(profileRef, snapshot => {
+      if (snapshot.exists()) {
+        const data = snapshot.data()
+        if (data.startingBalance !== undefined) {
+          setStartingBalanceState(parseFloat(data.startingBalance) || 0)
+        }
+      }
+    })
+
+    return unsubscribe
+  }, [auth.currentUser?.uid])
+
+  // Save starting balance to Firestore whenever it changes
+  async function setStartingBalance(amount) {
+    const parsed = parseFloat(amount) || 0
+    setStartingBalanceState(parsed)
+    const user = auth.currentUser
+    if (!user) return
+    const profileRef = doc(db, 'users', user.uid, 'profile', 'settings')
+    await setDoc(profileRef, { startingBalance: parsed }, { merge: true })
   }
 
   async function addTrade(trade) {
