@@ -7,21 +7,36 @@ import {
 import { db, auth } from '../firebase'
 import { calcTrade } from '../utils/calc'
 
+const BALANCE_CACHE = 'kilachei_balance_cache'
+
 export function useTrades() {
   const [trades, setTrades] = useState([])
   const [loading, setLoading] = useState(true)
-  const [startingBalance, setStartingBalanceState] = useState(0)
   const [uid, setUid] = useState(null)
 
-  // Wait for Firebase auth to resolve, then get uid
+  // Load cached balance instantly on mount so there's no flicker
+  const [startingBalance, setStartingBalanceState] = useState(() => {
+    try {
+      const cached = localStorage.getItem(BALANCE_CACHE)
+      return cached ? parseFloat(cached) : 0
+    } catch {
+      return 0
+    }
+  })
+
+  // Wait for Firebase auth to resolve
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, user => {
       setUid(user ? user.uid : null)
+      if (!user) {
+        setStartingBalanceState(0)
+        localStorage.removeItem(BALANCE_CACHE)
+      }
     })
     return unsubscribe
   }, [])
 
-  // Listen to trades — only runs once uid is known
+  // Listen to trades
   useEffect(() => {
     if (!uid) {
       setTrades([])
@@ -43,12 +58,10 @@ export function useTrades() {
     return unsubscribe
   }, [uid])
 
-  // Listen to starting balance — only runs once uid is known
+  // Listen to starting balance from Firestore
+  // Also write to localStorage cache every time it changes
   useEffect(() => {
-    if (!uid) {
-      setStartingBalanceState(0)
-      return
-    }
+    if (!uid) return
 
     const profileRef = doc(db, 'users', uid, 'profile', 'settings')
 
@@ -56,10 +69,10 @@ export function useTrades() {
       if (snapshot.exists()) {
         const data = snapshot.data()
         if (data.startingBalance !== undefined) {
-          setStartingBalanceState(parseFloat(data.startingBalance) || 0)
+          const val = parseFloat(data.startingBalance) || 0
+          setStartingBalanceState(val)
+          localStorage.setItem(BALANCE_CACHE, String(val)) // cache it
         }
-      } else {
-        setStartingBalanceState(0)
       }
     })
 
@@ -69,6 +82,7 @@ export function useTrades() {
   async function setStartingBalance(amount) {
     const parsed = parseFloat(amount) || 0
     setStartingBalanceState(parsed)
+    localStorage.setItem(BALANCE_CACHE, String(parsed)) // cache immediately
     if (!uid) return
     const profileRef = doc(db, 'users', uid, 'profile', 'settings')
     await setDoc(profileRef, { startingBalance: parsed }, { merge: true })
