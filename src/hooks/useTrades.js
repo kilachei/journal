@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
+import { onAuthStateChanged } from 'firebase/auth'
 import {
   collection, addDoc, updateDoc, deleteDoc,
-  doc, onSnapshot, query, orderBy, writeBatch, setDoc, getDoc
+  doc, onSnapshot, query, orderBy, writeBatch, setDoc
 } from 'firebase/firestore'
 import { db, auth } from '../firebase'
 import { calcTrade } from '../utils/calc'
@@ -10,14 +11,26 @@ export function useTrades() {
   const [trades, setTrades] = useState([])
   const [loading, setLoading] = useState(true)
   const [startingBalance, setStartingBalanceState] = useState(0)
+  const [uid, setUid] = useState(null)
 
-  // Listen to trades in real time
+  // Wait for Firebase auth to resolve, then get uid
   useEffect(() => {
-    const user = auth.currentUser
-    if (!user) return
+    const unsubscribe = onAuthStateChanged(auth, user => {
+      setUid(user ? user.uid : null)
+    })
+    return unsubscribe
+  }, [])
+
+  // Listen to trades — only runs once uid is known
+  useEffect(() => {
+    if (!uid) {
+      setTrades([])
+      setLoading(false)
+      return
+    }
 
     const q = query(
-      collection(db, 'users', user.uid, 'trades'),
+      collection(db, 'users', uid, 'trades'),
       orderBy('created_at', 'desc')
     )
 
@@ -28,14 +41,16 @@ export function useTrades() {
     })
 
     return unsubscribe
-  }, [auth.currentUser?.uid])
+  }, [uid])
 
-  // Load starting balance from Firestore on login
+  // Listen to starting balance — only runs once uid is known
   useEffect(() => {
-    const user = auth.currentUser
-    if (!user) return
+    if (!uid) {
+      setStartingBalanceState(0)
+      return
+    }
 
-    const profileRef = doc(db, 'users', user.uid, 'profile', 'settings')
+    const profileRef = doc(db, 'users', uid, 'profile', 'settings')
 
     const unsubscribe = onSnapshot(profileRef, snapshot => {
       if (snapshot.exists()) {
@@ -43,50 +58,46 @@ export function useTrades() {
         if (data.startingBalance !== undefined) {
           setStartingBalanceState(parseFloat(data.startingBalance) || 0)
         }
+      } else {
+        setStartingBalanceState(0)
       }
     })
 
     return unsubscribe
-  }, [auth.currentUser?.uid])
+  }, [uid])
 
-  // Save starting balance to Firestore whenever it changes
   async function setStartingBalance(amount) {
     const parsed = parseFloat(amount) || 0
     setStartingBalanceState(parsed)
-    const user = auth.currentUser
-    if (!user) return
-    const profileRef = doc(db, 'users', user.uid, 'profile', 'settings')
+    if (!uid) return
+    const profileRef = doc(db, 'users', uid, 'profile', 'settings')
     await setDoc(profileRef, { startingBalance: parsed }, { merge: true })
   }
 
   async function addTrade(trade) {
-    const user = auth.currentUser
-    if (!user) return
-    await addDoc(collection(db, 'users', user.uid, 'trades'), {
+    if (!uid) return
+    await addDoc(collection(db, 'users', uid, 'trades'), {
       ...trade,
       created_at: new Date().toISOString(),
     })
   }
 
   async function updateTrade(id, updatedTrade) {
-    const user = auth.currentUser
-    if (!user) return
-    const ref = doc(db, 'users', user.uid, 'trades', id)
+    if (!uid) return
+    const ref = doc(db, 'users', uid, 'trades', id)
     await updateDoc(ref, { ...updatedTrade })
   }
 
   async function deleteTrade(id) {
-    const user = auth.currentUser
-    if (!user) return
-    await deleteDoc(doc(db, 'users', user.uid, 'trades', id))
+    if (!uid) return
+    await deleteDoc(doc(db, 'users', uid, 'trades', id))
   }
 
   async function clearAll() {
-    const user = auth.currentUser
-    if (!user) return
+    if (!uid) return
     const batch = writeBatch(db)
     trades.forEach(t => {
-      batch.delete(doc(db, 'users', user.uid, 'trades', t.id))
+      batch.delete(doc(db, 'users', uid, 'trades', t.id))
     })
     await batch.commit()
   }
@@ -106,12 +117,11 @@ export function useTrades() {
       const reader = new FileReader()
       reader.onload = async e => {
         try {
-          const user = auth.currentUser
-          if (!user) throw new Error('Not logged in')
+          if (!uid) throw new Error('Not logged in')
           const imported = JSON.parse(e.target.result)
           if (!Array.isArray(imported)) throw new Error('Invalid file: expected an array of trades')
           for (const t of imported) {
-            await addDoc(collection(db, 'users', user.uid, 'trades'), {
+            await addDoc(collection(db, 'users', uid, 'trades'), {
               ...t,
               created_at: t.created_at || new Date().toISOString(),
             })
